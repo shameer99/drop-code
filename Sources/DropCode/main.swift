@@ -585,6 +585,8 @@ final class DropPanelController: NSObject {
         let escapedCommand = Self.shellQuote(launchCommand)
         let script = """
         #!/bin/zsh
+        unset HERDR_ENV HERDR_PANE_ID HERDR_WORKSPACE_ID HERDR_TAB_ID HERDR_SOCKET_PATH HERDR_SESSION HERDR_BIN_PATH HERDR_CLIENT_SOCKET_PATH
+        unset ${(k)parameters[(I)HERDR_*]}
         /bin/zsh -lic \(escapedCommand)
         exit_code=$?
         printf '\\nDropCode command exited (%d). Starting a login shell.\\n' "$exit_code"
