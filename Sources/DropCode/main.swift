@@ -80,6 +80,24 @@ final class PanelClipView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.masksToBounds = true
+        layer?.cornerRadius = 14
+        layer?.cornerCurve = .continuous
+    }
+
+    func updateCornerMask(hasTopInset: Bool, isFullWidth: Bool) {
+        if hasTopInset || !isFullWidth {
+            layer?.maskedCorners = [
+                .layerMinXMinYCorner,
+                .layerMaxXMinYCorner,
+                .layerMinXMaxYCorner,
+                .layerMaxXMaxYCorner,
+            ]
+        } else {
+            layer?.maskedCorners = [
+                .layerMinXMinYCorner,
+                .layerMaxXMinYCorner,
+            ]
+        }
     }
 
     @available(*, unavailable)
@@ -249,6 +267,10 @@ final class DropPanelController: NSObject {
         clipView.autoresizingMask = [.width, .height]
         terminalContainer.autoresizingMask = [.width, .height]
         clipView.addSubview(terminalContainer)
+        clipView.updateCornerMask(
+            hasTopInset: initialScreen.safeAreaInsets.top > 0,
+            isFullWidth: widthRatio >= 1.0
+        )
         panel.contentView = clipView
 
         if notificationsEnabled {
@@ -374,6 +396,10 @@ final class DropPanelController: NSObject {
                 widthRatio: panelWidthRatio
             )
             previousApplication = NSWorkspace.shared.frontmostApplication
+            clipView.updateCornerMask(
+                hasTopInset: screen.safeAreaInsets.top > 0,
+                isFullWidth: panelWidthRatio >= 1.0
+            )
             panel.setFrame(frame, display: false)
             clipView.layoutSubtreeIfNeeded()
             terminalContainer.frame = hiddenContentFrame
@@ -448,6 +474,10 @@ final class DropPanelController: NSObject {
             widthRatio: panelWidthRatio
         )
         panel.setFrame(frame, display: isVisible)
+        clipView.updateCornerMask(
+            hasTopInset: screen.safeAreaInsets.top > 0,
+            isFullWidth: panelWidthRatio >= 1.0
+        )
         clipView.layoutSubtreeIfNeeded()
         terminalContainer.frame = isVisible ? clipView.bounds : hiddenContentFrame
         terminalView?.fitToSize()
@@ -541,11 +571,13 @@ final class DropPanelController: NSObject {
         widthRatio: CGFloat
     ) -> NSRect {
         let screenFrame = screen.frame
-        let height = max(1, floor(screenFrame.height * heightRatio))
+        let topInset = screen.safeAreaInsets.top
+        let usableHeight = max(1, screenFrame.height - topInset)
+        let height = max(1, floor(usableHeight * heightRatio))
         let width = max(1, floor(screenFrame.width * widthRatio))
         return NSRect(
             x: screenFrame.midX - width / 2,
-            y: screenFrame.maxY - height,
+            y: screenFrame.maxY - topInset - height,
             width: width,
             height: height
         )
@@ -554,8 +586,8 @@ final class DropPanelController: NSObject {
     private static var terminalConfiguration: TerminalConfiguration {
         TerminalConfiguration(startingFrom: .default) { builder in
             builder.withFontSize(14)
-            builder.withWindowPaddingX(0)
-            builder.withWindowPaddingY(0)
+            builder.withWindowPaddingX(10)
+            builder.withWindowPaddingY(8)
             builder.withCustom("mouse-hide-while-typing", "true")
             builder.withCustom("scrollbar", "never")
         }
